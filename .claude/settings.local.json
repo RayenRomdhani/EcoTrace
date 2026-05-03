@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(curl -s http://localhost:5000/api/stats)",
+      "Bash(curl -s -X POST http://localhost:5000/api/event -H \"Content-Type: application/json\" -d \"{\\\\\"site\\\\\":\\\\\"claude.ai\\\\\",\\\\\"model\\\\\":\\\\\"claude\\\\\",\\\\\"type\\\\\":\\\\\"chat\\\\\",\\\\\"timestamp\\\\\":\\\\\"2026-05-02T20:30:00\\\\\"}\")",
+      "Bash(curl -s http://localhost:5000/api/credits)",
+      "Bash(pkill -f \"python app.py\")",
+      "Bash(GEMINI_API_KEY=AIzaSyC70eUd1a9Td-dnhlDzC5fgpNbh94u_x5s python app.py)",
+      "Bash(curl -s http://localhost:5000/api/summary)",
+      "Bash(python -c ' *)",
+      "Bash(curl -s -X POST http://localhost:5000/api/event -H \"Content-Type: application/json\" -d \"{\\\\\"site\\\\\":\\\\\"midjourney.com\\\\\",\\\\\"model\\\\\":\\\\\"midjourney\\\\\",\\\\\"type\\\\\":\\\\\"image\\\\\",\\\\\"timestamp\\\\\":\\\\\"2026-05-02T14:00:00\\\\\"}\")",
+      "Bash(curl -s http://localhost:5000/dashboard)",
+      "Bash(curl -s -X POST http://localhost:5000/api/event -H \"Content-Type: application/json\" -d \"{\\\\\"site\\\\\":\\\\\"chat.openai.com\\\\\",\\\\\"model\\\\\":\\\\\"gpt-4\\\\\",\\\\\"type\\\\\":\\\\\"chat\\\\\",\\\\\"timestamp\\\\\":\\\\\"2026-05-02T12:00:00\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:5000/api/event -H \"Content-Type: application/json\" -d \"{\\\\\"site\\\\\":\\\\\"midjourney.com\\\\\",\\\\\"model\\\\\":\\\\\"midjourney\\\\\",\\\\\"type\\\\\":\\\\\"image\\\\\",\\\\\"timestamp\\\\\":\\\\\"2026-05-02T13:00:00\\\\\"}\")"
+    ]
+  }
+}

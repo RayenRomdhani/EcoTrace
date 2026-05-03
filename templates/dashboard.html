@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoTrace — AI Water Footprint</title>
+
+  <style>
+    /* ── Google Fonts: Plus Jakarta Sans ─────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    /* ── Design tokens ───────────────────────────────────────────────────────── */
+    :root {
+      --purple:       #5B4FCF;
+      --purple-mid:   #7C6FE0;
+      --purple-light: #9B8FEE;
+      --purple-dark:  #4A3FB5;
+      --glass-bg:     rgba(255,255,255,0.75);
+      --glass-border: rgba(255,255,255,0.9);
+      --text-dark:    #1A1A2E;
+      --text-mid:     #444444;
+      --text-gray:    #666666;
+      --text-muted:   #888888;
+      --sidebar-w:    260px;
+    }
+
+    /* ── Global reset ────────────────────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    a { text-decoration: none; }
+    button { font-family: inherit; }
+
+    /* ── Custom scrollbar ────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar             { width: 6px; }
+    ::-webkit-scrollbar-track       { background: rgba(91,79,207,0.05); }
+    ::-webkit-scrollbar-thumb       { background: rgba(91,79,207,0.25); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(91,79,207,0.45); }
+
+    /* ── Body & page shell ───────────────────────────────────────────────────── */
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(135deg, #E8E8F8 0%, #F0EEFF 50%, #E4E8FF 100%);
+      background-attachment: fixed;
+      color: var(--text-dark);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Outer layout: fixed sidebar + scrollable main ───────────────────────── */
+    .layout { display: flex; height: 100vh; }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       SIDEBAR — frosted white glass
+    ════════════════════════════════════════════════════════════════════════════ */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255,255,255,0.8);
+      box-shadow: 4px 0 24px rgba(149,130,255,0.08);
+      display: flex;
+      flex-direction: column;
+      padding: 32px 18px 28px;
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      z-index: 200;
+    }
+
+    /* Logo wordmark — deep purple */
+    .logo-text {
+      font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+      color: var(--purple);
+      background: none;
+      -webkit-text-fill-color: var(--purple);
+    }
+    .logo-tagline {
+      font-size: 11px; color: #888888; margin-top: 5px; font-weight: 400;
+    }
+
+    /* Sidebar rule */
+    .sidebar-rule { height: 1px; background: rgba(91,79,207,0.1); margin: 24px 0 20px; }
+
+    /* Nav section label */
+    .nav-group-label {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: #AAAAAA;
+      padding-left: 10px; margin-bottom: 10px;
+    }
+
+    /* Individual nav links */
+    .nav-link {
+      display: flex; align-items: center; gap: 11px;
+      padding: 10px 10px 10px 12px;
+      border-radius: 10px; cursor: pointer;
+      font-size: 13.5px; font-weight: 500; color: var(--text-gray);
+      border-left: 3px solid transparent;
+      transition: background 0.2s ease, color 0.2s ease;
+      user-select: none;
+    }
+    .nav-link .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+    .nav-link:hover {
+      background: rgba(91,79,207,0.08);
+      color: var(--purple);
+      border-left-color: transparent;
+    }
+    /* Active link — purple gradient pill */
+    .nav-link.active {
+      background: linear-gradient(135deg, #7C6FE0, #5B4FCF);
+      color: #FFFFFF;
+      border-left-color: transparent;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(91,79,207,0.35);
+    }
+
+    /* Sidebar footer */
+    .sidebar-footer {
+      margin-top: auto;
+      border-top: 1px solid rgba(91,79,207,0.1);
+      padding-top: 20px;
+    }
+    .footer-label { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #AAAAAA; }
+    .footer-date  { font-size: 13px; color: var(--text-gray); margin-top: 5px; font-weight: 500; }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       MAIN SCROLLABLE AREA
+    ════════════════════════════════════════════════════════════════════════════ */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 38px 44px 60px;
+    }
+
+    /* ── Alert banner ────────────────────────────────────────────────────────── */
+    .alert-banner {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+      background: rgba(255,200,100,0.15);
+      border: 1px solid rgba(255,180,50,0.3);
+      border-left: 4px solid #FFC107;
+      border-radius: 16px; padding: 14px 18px; margin-bottom: 30px;
+      font-size: 13.5px; font-weight: 500; color: #8B6914; line-height: 1.5;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      animation: slideDown 0.35s ease;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .alert-close {
+      background: none; border: none; color: #8B6914; cursor: pointer;
+      font-size: 18px; line-height: 1; opacity: 0.65;
+      transition: opacity 0.2s ease; padding: 0; flex-shrink: 0;
+    }
+    .alert-close:hover { opacity: 1; }
+
+    /* ── Section visibility — JS toggles is-active ───────────────────────────── */
+    .section { display: none; }
+    .section.is-active { display: block; animation: fadeUp 0.3s ease both; }
+
+    /* ── Page header block ───────────────────────────────────────────────────── */
+    .page-header   { margin-bottom: 30px; }
+    .page-title    { font-size: 26px; font-weight: 800; letter-spacing: -0.6px; color: var(--text-dark); }
+    .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 6px; }
+
+    /* ── Shared card base — glassmorphism ────────────────────────────────────── */
+    .card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(149,130,255,0.12);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(149,130,255,0.18);
+    }
+    .card-title { font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 20px; }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       SECTION 1 — OVERVIEW
+    ════════════════════════════════════════════════════════════════════════════ */
+
+    /* 3-column stat cards grid */
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 20px; margin-bottom: 26px;
+    }
+
+    /* Stat card base — glass */
+    .stat-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(149,130,255,0.12);
+      padding: 26px 24px;
+      display: flex; flex-direction: column; gap: 7px;
+      position: relative; overflow: hidden; cursor: default;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    /* Purple gradient top-line accent revealed on hover */
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--purple-light), var(--purple));
+      opacity: 0; transition: opacity 0.2s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(149,130,255,0.18);
+    }
+    .stat-card:hover::before { opacity: 1; }
+
+    /* Third stat card — standout purple gradient */
+    .stat-grid > .stat-card:nth-child(3) {
+      background: linear-gradient(135deg, #7C6FE0 0%, #5B4FCF 50%, #4A3FB5 100%);
+      border-color: transparent;
+      box-shadow: 0 8px 32px rgba(91,79,207,0.35);
+    }
+    .stat-grid > .stat-card:nth-child(3) .stat-value,
+    .stat-grid > .stat-card:nth-child(3) .stat-unit,
+    .stat-grid > .stat-card:nth-child(3) .stat-label,
+    .stat-grid > .stat-card:nth-child(3) .stat-sub { color: #FFFFFF; }
+    .stat-grid > .stat-card:nth-child(3) .stat-icon {
+      background: rgba(255,255,255,0.25);
+      box-shadow: none;
+    }
+    .stat-grid > .stat-card:nth-child(3)::before    { display: none; }
+    .stat-grid > .stat-card:nth-child(3):hover      { box-shadow: 0 16px 48px rgba(91,79,207,0.45); }
+
+    /* Stat icon — purple gradient rounded square */
+    .stat-icon {
+      font-size: 18px; margin-bottom: 4px;
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #7C6FE0, #5B4FCF);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(91,79,207,0.3);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+
+    .stat-value { font-size: 38px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; color: var(--text-dark); }
+    .stat-unit  { font-size: 17px; font-weight: 600; color: var(--text-muted); letter-spacing: 0; }
+    .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); }
+    .stat-sub   { font-size: 12px; color: #999999; }
+
+    /* Chart card */
+    .chart-card  { padding: 28px; }
+    .chart-wrap  { height: 215px; position: relative; }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       SECTION 2 — MY CREDITS
+    ════════════════════════════════════════════════════════════════════════════ */
+    .credits-layout { display: flex; flex-direction: column; gap: 24px; }
+
+    /* Credit balance hero — glass card */
+    .credits-hero {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(149,130,255,0.12);
+      padding: 52px 64px; text-align: center;
+      position: relative; overflow: hidden;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .credits-hero:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(149,130,255,0.18); }
+    .credits-hero::after { display: none; }
+
+    .credits-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(91,79,207,0.08); border: 1px solid rgba(91,79,207,0.2);
+      border-radius: 100px; padding: 5px 16px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--purple); margin-bottom: 22px;
+    }
+    /* Big number — purple gradient text */
+    .credits-number {
+      font-size: 86px; font-weight: 800; letter-spacing: -4px; line-height: 1;
+      background: linear-gradient(135deg, #7C6FE0, #5B4FCF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .credits-label   { font-size: 17px; font-weight: 600; color: var(--text-dark); margin-bottom: 10px; }
+    .credits-subtext { font-size: 14px; color: var(--text-gray); line-height: 1.6; }
+    .credits-subtext strong { color: var(--purple); -webkit-text-fill-color: var(--purple); }
+
+    /* How you earn credits card */
+    .earn-card { padding: 28px; }
+    .earn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+    .earn-item {
+      background: rgba(91,79,207,0.06); border: 1px solid rgba(91,79,207,0.12);
+      border-radius: 14px; padding: 22px 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .earn-item:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(149,130,255,0.15); }
+    /* Earn icon — purple gradient rounded square */
+    .earn-icon {
+      font-size: 20px;
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, #7C6FE0, #5B4FCF);
+      border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .earn-text { font-size: 12.5px; color: #444444; line-height: 1.55; }
+    .earn-text strong { color: var(--text-dark); }
+
+    /* Progress bar card */
+    .progress-card { padding: 28px; }
+    .progress-track {
+      height: 10px; background: rgba(91,79,207,0.1);
+      border-radius: 10px; overflow: hidden; margin: 18px 0 12px;
+    }
+    .progress-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #9B8FEE, #5B4FCF);
+      border-radius: 10px;
+      transition: width 1.3s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .progress-meta { display: flex; justify-content: space-between; font-size: 12.5px; }
+    .progress-remaining { color: var(--purple); font-weight: 600; }
+    .progress-goal      { color: var(--text-muted); }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       SECTION 3 — SPEND CREDITS
+    ════════════════════════════════════════════════════════════════════════════ */
+    .donation-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    }
+    .donation-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(149,130,255,0.12);
+      padding: 30px 24px;
+      display: flex; flex-direction: column; gap: 15px;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .donation-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(149,130,255,0.18);
+    }
+    .d-icon  { font-size: 38px; }
+    .d-title { font-size: 18px; font-weight: 700; color: var(--text-dark); }
+    .d-desc  { font-size: 13px; color: #777777; line-height: 1.65; flex: 1; }
+    .d-cost  {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(91,79,207,0.08); border: 1px solid rgba(91,79,207,0.15);
+      border-radius: 100px; padding: 5px 14px;
+      font-size: 12.5px; font-weight: 600; color: var(--purple); width: fit-content;
+    }
+
+    /* Redeem buttons */
+    .redeem-btn {
+      width: 100%; padding: 13px 20px; border-radius: 12px; border: none;
+      font-size: 13.5px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    /* Active button — purple gradient */
+    .redeem-btn.can-afford {
+      background: linear-gradient(135deg, #7C6FE0, #5B4FCF);
+      color: #FFFFFF;
+      box-shadow: 0 4px 15px rgba(91,79,207,0.3);
+    }
+    .redeem-btn.can-afford:hover {
+      box-shadow: 0 8px 25px rgba(91,79,207,0.4);
+      transform: translateY(-2px);
+    }
+    /* Disabled button */
+    .redeem-btn.no-credits {
+      background: rgba(0,0,0,0.06); color: #BBBBBB;
+      border: none; cursor: not-allowed;
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       MODAL
+    ════════════════════════════════════════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(91,79,207,0.2); backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(91,79,207,0.2);
+      padding: 46px 44px;
+      max-width: 420px; width: 90%; text-align: center;
+      transform: scale(0.88) translateY(14px);
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+
+    .modal-emoji   { font-size: 52px; margin-bottom: 18px; }
+    .modal-title   { font-size: 22px; font-weight: 800; color: var(--text-dark); margin-bottom: 12px; }
+    .modal-message { font-size: 14.5px; color: var(--text-gray); line-height: 1.65; margin-bottom: 30px; }
+    .modal-close-btn {
+      background: linear-gradient(135deg, #7C6FE0, #5B4FCF); color: #FFFFFF;
+      border: none; border-radius: 12px;
+      padding: 13px 36px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(91,79,207,0.3);
+    }
+    .modal-close-btn:hover { box-shadow: 0 8px 25px rgba(91,79,207,0.4); transform: translateY(-2px); }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+       KEYFRAMES
+    ════════════════════════════════════════════════════════════════════════════ */
+    @keyframes slideDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp    { from { opacity:0; transform:translateY(14px);  } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+
+<body>
+<div class="layout">
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       SIDEBAR
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <div style="margin-bottom:4px;">
+      <div class="logo-text">💧 EcoTrace</div>
+      <div class="logo-tagline">Track your AI water footprint</div>
+    </div>
+
+    <div class="sidebar-rule"></div>
+
+    <div class="nav-group-label">Navigation</div>
+    <nav style="display:flex;flex-direction:column;gap:3px;">
+      <!-- data-target matches the suffix of the section id (sec-overview etc.) -->
+      <div class="nav-link active" data-target="overview" onclick="switchSection('overview', this)">
+        <span class="nav-icon">📊</span> Overview
+      </div>
+      <div class="nav-link" data-target="credits" onclick="switchSection('credits', this)">
+        <span class="nav-icon">💎</span> My Credits
+      </div>
+      <div class="nav-link" data-target="spend" onclick="switchSection('spend', this)">
+        <span class="nav-icon">🌍</span> Spend Credits
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="footer-label">Today</div>
+      <!-- JS fills this in on load -->
+      <div class="footer-date" id="js-date">—</div>
+    </div>
+
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- Alert banner: Jinja2 only renders this block when today_gallons > 1.0 -->
+    {% if stats.today_gallons > 1.0 %}
+    <div class="alert-banner" id="js-alert">
+      <span>
+        ⚠️ High usage today — you've wasted
+        <strong>{{ stats.today_gallons }} gallons</strong>
+        of water on AI tools. Consider taking a break.
+      </span>
+      <button class="alert-close" onclick="dismissAlert()" aria-label="Dismiss">✕</button>
+    </div>
+    {% endif %}
+
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SECTION 1 — OVERVIEW  (default visible via is-active)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <section id="sec-overview" class="section is-active">
+
+      <div class="page-header">
+        <div class="page-title">Overview</div>
+        <div class="page-subtitle">Your real-time AI water footprint at a glance</div>
+      </div>
+
+      <!-- Row 1: three stat cards -->
+      <div class="stat-grid">
+
+        <!-- Card 1 — today_gallons -->
+        <div class="stat-card">
+          <div class="stat-icon">💧</div>
+          <div class="stat-value">
+            <!-- JS animates this from 0 to stats.today_gallons -->
+            <span id="anim-today">0</span><span class="stat-unit"> gal</span>
+          </div>
+          <div class="stat-label">Water wasted today</div>
+          <!-- today_queries rendered directly by Jinja2 -->
+          <div class="stat-sub">{{ stats.today_queries }} AI queries</div>
+        </div>
+
+        <!-- Card 2 — week_gallons -->
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value">
+            <span id="anim-week">0</span><span class="stat-unit"> gal</span>
+          </div>
+          <div class="stat-label">Water wasted this week</div>
+          <div class="stat-sub">Across 7 days</div>
+        </div>
+
+        <!-- Card 3 — streak_days -->
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value">
+            <span id="anim-streak">0</span><span class="stat-unit"> days</span>
+          </div>
+          <div class="stat-label">Days below average</div>
+          <div class="stat-sub">Keep it up</div>
+        </div>
+
+      </div><!-- /stat-grid -->
+
+      <!-- Row 2: weekly bar chart -->
+      <div class="card chart-card">
+        <div class="card-title">Your water footprint — last 7 days</div>
+        <div class="chart-wrap">
+          <canvas id="historyChart"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SECTION 2 — MY CREDITS  (hidden until nav click)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <section id="sec-credits" class="section">
+
+      <div class="page-header">
+        <div class="page-title">My Credits</div>
+        <div class="page-subtitle">Eco-rewards earned by using AI responsibly</div>
+      </div>
+
+      <div class="credits-layout">
+
+        <!-- Big animated credit balance -->
+        <div class="credits-hero">
+          <div class="credits-badge">💧 Water Credits</div>
+          <!-- JS animates this number when the section is entered -->
+          <div class="credits-number" id="anim-credits">0</div>
+          <div class="credits-label">Water Credits earned</div>
+          <!-- gallons_saved rendered by Jinja2 -->
+          <div class="credits-subtext">
+            You saved <strong>{{ credits.gallons_saved }} gallons</strong>
+            compared to your daily average
+          </div>
+        </div>
+
+        <!-- How credits are earned -->
+        <div class="card earn-card">
+          <div class="card-title">How you earn credits</div>
+          <div class="earn-grid">
+            <div class="earn-item">
+              <div class="earn-icon">💧</div>
+              <div class="earn-text">Use less than your daily average<br><strong>→ +10 credits</strong></div>
+            </div>
+            <div class="earn-item">
+              <div class="earn-icon">🔥</div>
+              <div class="earn-text">3-day streak below average<br><strong>→ +25 credits</strong></div>
+            </div>
+            <div class="earn-item">
+              <div class="earn-icon">✅</div>
+              <div class="earn-text">First install bonus<br><strong>→ +50 credits</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress to next reward -->
+        <div class="card progress-card">
+          <div class="card-title">Progress to next reward</div>
+          <div class="progress-track">
+            <!-- JS sets the width via CSS transition on section enter -->
+            <div class="progress-fill" id="js-progress-fill"></div>
+          </div>
+          <div class="progress-meta">
+            <span class="progress-remaining" id="js-progress-label">—</span>
+            <span class="progress-goal">Next reward at every 100 credits</span>
+          </div>
+        </div>
+
+      </div><!-- /credits-layout -->
+    </section>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SECTION 3 — SPEND CREDITS  (hidden until nav click)
+    ════════════════════════════════════════════════════════════════════════ -->
+    <section id="sec-spend" class="section">
+
+      <div class="page-header">
+        <div class="page-title">Spend Credits</div>
+        <div class="page-subtitle">
+          Turn your savings into real impact. Each credit represents water and energy
+          saved. Redeem them for real-world environmental donations.
+        </div>
+      </div>
+
+      <div class="donation-grid">
+
+        <!-- Donation 1: Plant a Tree — 100 credits -->
+        <div class="donation-card">
+          <div class="d-icon">🌳</div>
+          <div class="d-title">Plant a Tree</div>
+          <div class="d-desc">
+            One tree absorbs ~48 lbs of CO₂ per year. Your credits help fund
+            reforestation efforts worldwide.
+          </div>
+          <div class="d-cost">⚡ 100 credits</div>
+          <!-- Jinja2 decides button state based on credits.credits value -->
+          {% if credits.credits >= 100 %}
+            <button class="redeem-btn can-afford" onclick="openModal(100, 'Plant a Tree')">
+              Redeem 100 credits
+            </button>
+          {% else %}
+            <button class="redeem-btn no-credits" disabled>Not enough credits</button>
+          {% endif %}
+        </div>
+
+        <!-- Donation 2: Clean Cooking Fuel — 500 credits -->
+        <div class="donation-card">
+          <div class="d-icon">🔥</div>
+          <div class="d-title">1 Month Clean Fuel</div>
+          <div class="d-desc">
+            Replace wood burning for a family in Sub-Saharan Africa for one full
+            month of clean cooking fuel.
+          </div>
+          <div class="d-cost">⚡ 500 credits</div>
+          {% if credits.credits >= 500 %}
+            <button class="redeem-btn can-afford" onclick="openModal(500, '1 Month Clean Fuel')">
+              Redeem 500 credits
+            </button>
+          {% else %}
+            <button class="redeem-btn no-credits" disabled>Not enough credits</button>
+          {% endif %}
+        </div>
+
+        <!-- Donation 3: Solar for Schools — 1000 credits -->
+        <div class="donation-card">
+          <div class="d-icon">☀️</div>
+          <div class="d-title">10 kWh Solar Energy</div>
+          <div class="d-desc">
+            Power a rural school with clean solar energy for a full day with
+            10 kWh of renewable energy generation.
+          </div>
+          <div class="d-cost">⚡ 1,000 credits</div>
+          {% if credits.credits >= 1000 %}
+            <button class="redeem-btn can-afford" onclick="openModal(1000, '10 kWh Solar Energy')">
+              Redeem 1000 credits
+            </button>
+          {% else %}
+            <button class="redeem-btn no-credits" disabled>Not enough credits</button>
+          {% endif %}
+        </div>
+
+      </div><!-- /donation-grid -->
+    </section>
+
+  </main>
+</div><!-- /layout -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL — credit redemption confirmation popup
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="js-modal" onclick="onOverlayClick(event)">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-emoji">🎉</div>
+    <div class="modal-title">Thank you!</div>
+    <!-- JS fills in the specific donation name and credit cost -->
+    <div class="modal-message" id="js-modal-msg">Your donation has been registered.</div>
+    <button class="modal-close-btn" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+
+<!-- Chart.js loaded from CDN before the main script block -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  /* ────────────────────────────────────────────────────────────────────────────
+     Jinja2 → JavaScript data bridge
+     historyData is serialised by the tojson filter into a safe JSON array.
+     The four scalar values are emitted as JS number literals.
+  ──────────────────────────────────────────────────────────────────────────── */
+  const historyData  = {{ history | tojson }};
+  const chartLabels  = historyData.map(d => d.date);
+  const chartValues  = historyData.map(d => d.gallons);
+
+  const VAL_TODAY   = {{ stats.today_gallons }};
+  const VAL_WEEK    = {{ stats.week_gallons }};
+  const VAL_STREAK  = {{ credits.streak_days }};
+  const VAL_CREDITS = {{ credits.credits }};
+
+
+  /* ── Sidebar date ─────────────────────────────────────────────────────────── */
+  /* Writes today's human-readable date into the sidebar footer.              */
+  function initDate() {
+    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('js-date').textContent =
+      new Date().toLocaleDateString('en-US', opts);
+  }
+
+
+  /* ── Section navigation ───────────────────────────────────────────────────── */
+  /* Hides every section, shows the target one (triggering the fadeUp keyframe
+     by re-adding is-active), and updates the sidebar active link.
+     Also fires per-section setup work (progress bar, credits counter).       */
+  function switchSection(target, linkEl) {
+    // Remove is-active from every section (instantly hides them)
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('is-active'));
+
+    // Remove active highlight from every nav link
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+    // Add is-active to the target — the @keyframes fadeUp fires automatically
+    document.getElementById('sec-' + target).classList.add('is-active');
+
+    // Highlight the clicked nav link
+    linkEl.classList.add('active');
+
+    // Credits section: animate the big number and the progress bar on entry
+    if (target === 'credits') {
+      setTimeout(() => {
+        animateCounter('anim-credits', VAL_CREDITS, 0);
+        animateProgressBar();
+      }, 80);
+    }
+  }
+
+
+  /* ── Numeric counter animation ────────────────────────────────────────────── */
+  /* Eases a number in an element from 0 to `target` over ~1 second.
+     decimals: how many decimal places to show (0 for integers, 2 for floats). */
+  function animateCounter(id, target, decimals) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const duration = 1050;
+    const startTs  = performance.now();
+
+    (function tick(now) {
+      const raw    = Math.min((now - startTs) / duration, 1);
+      const eased  = 1 - Math.pow(1 - raw, 3);   /* ease-out cubic */
+      const cur    = eased * target;
+      el.textContent = decimals ? cur.toFixed(decimals) : Math.round(cur);
+      if (raw < 1) requestAnimationFrame(tick);
+      else el.textContent = decimals ? target.toFixed(decimals) : target;
+    })(startTs);
+  }
+
+
+  /* ── Progress bar ─────────────────────────────────────────────────────────── */
+  /* Calculates progress within the current 100-credit milestone band and
+     sets the CSS width (which the CSS transition animates smoothly).         */
+  function animateProgressBar() {
+    const mod       = VAL_CREDITS % 100;
+    const filled    = (VAL_CREDITS > 0 && mod === 0) ? 100 : mod;
+    const remaining = 100 - filled;
+
+    // Setting width triggers the CSS `transition: width 1.3s` declared above
+    document.getElementById('js-progress-fill').style.width = filled + '%';
+
+    document.getElementById('js-progress-label').textContent =
+      remaining === 0
+        ? "🎉 You've hit your next reward milestone!"
+        : remaining + ' credits until your next reward';
+  }
+
+
+  /* ── Chart.js weekly history bar chart ───────────────────────────────────── */
+  /* Renders a dark-themed bar chart using the history data from Jinja2.
+     Horizontal grid lines only; custom tooltip; animated on load.           */
+  function buildChart() {
+    const ctx = document.getElementById('historyChart').getContext('2d');
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label:           'Gallons',
+          data:            chartValues,
+          backgroundColor: 'rgba(45, 45, 255, 0.75)',
+          borderColor:     'rgba(45, 45, 255, 1)',
+          borderWidth:     1,
+          borderRadius:    6,
+          borderSkipped:   false,
+        }]
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation: { duration: 950, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#FFFFFF',
+            borderColor:     'rgba(45,45,255,0.3)',
+            borderWidth:     1,
+            titleColor:      '#111111',
+            bodyColor:       '#666666',
+            padding:         10,
+            callbacks: {
+              title: items => items[0].label.slice(5),          /* show MM-DD only */
+              label: ctx   => '  ' + ctx.parsed.y.toFixed(2) + ' gal',
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid:   { display: false },
+            border: { color: '#E8E8F0' },
+            ticks: {
+              color: '#888888',
+              font:  { family: 'Inter', size: 11 },
+              callback: (val, idx) => (chartLabels[idx] || '').slice(5), /* MM-DD */
+            }
+          },
+          y: {
+            grid:   { color: 'rgba(232,232,240,0.8)' },
+            border: { display: false },
+            ticks: {
+              color:    '#888888',
+              font:     { family: 'Inter', size: 11 },
+              callback: val => val + ' gal',
+            },
+            beginAtZero: true,
+          }
+        }
+      }
+    });
+  }
+
+
+  /* ── Alert banner dismiss ─────────────────────────────────────────────────── */
+  /* Fades and slides the banner up, removes it from DOM after transition.    */
+  function dismissAlert() {
+    const el = document.getElementById('js-alert');
+    if (!el) return;
+    el.style.opacity   = '0';
+    el.style.transform = 'translateY(-10px)';
+    setTimeout(() => el.remove(), 320);
+  }
+
+
+  /* ── Modal: open ──────────────────────────────────────────────────────────── */
+  /* Triggered by Redeem buttons. Fills in the cost and item name, then
+     shows the overlay (CSS transition fades it in, modal springs in).       */
+  function openModal(cost, itemName) {
+    document.getElementById('js-modal-msg').textContent =
+      `Your "${itemName}" donation has been registered. ${cost} credits have been deducted.`;
+    document.getElementById('js-modal').classList.add('open');
+  }
+
+  /* ── Modal: close ─────────────────────────────────────────────────────────── */
+  function closeModal() {
+    document.getElementById('js-modal').classList.remove('open');
+  }
+
+  /* Close when clicking the dark overlay behind the modal box. */
+  function onOverlayClick(evt) {
+    if (evt.target === document.getElementById('js-modal')) closeModal();
+  }
+
+  /* Also close on Escape key for accessibility. */
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+
+  /* ── Page initialisation ─────────────────────────────────────────────────── */
+  /* Runs once after the DOM is ready. Kicks off every startup task.          */
+  window.addEventListener('DOMContentLoaded', () => {
+    initDate();
+
+    /* Animate the three overview stat cards from 0 to their real values */
+    animateCounter('anim-today',  VAL_TODAY,  2);
+    animateCounter('anim-week',   VAL_WEEK,   2);
+    animateCounter('anim-streak', VAL_STREAK, 0);
+
+    /* Render the Chart.js bar chart */
+    buildChart();
+
+    /* Pre-run the progress bar maths (visible when user clicks My Credits) */
+    animateProgressBar();
+  });
+</script>
+
+</body>
+</html>

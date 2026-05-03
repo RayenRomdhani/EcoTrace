@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "EcoTrace",
+  "version": "1.0",
+  "description": "Track the water cost of your AI usage",
+
+  "permissions": [
+    "tabs",
+    "storage",
+    "notifications",
+    "scripting",
+    "activeTab",
+    "background"
+  ],
+
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "*://chat.openai.com/*",
+    "*://claude.ai/*",
+    "*://gemini.google.com/*",
+    "*://copilot.microsoft.com/*",
+    "*://perplexity.ai/*",
+    "*://midjourney.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://chat.openai.com/*",
+        "*://claude.ai/*",
+        "*://gemini.google.com/*",
+        "*://copilot.microsoft.com/*",
+        "*://perplexity.ai/*",
+        "*://midjourney.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_title": "EcoTrace — Click to view dashboard"
+  }
+}
