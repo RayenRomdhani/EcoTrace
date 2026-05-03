@@ -48,18 +48,17 @@ Sources: UC Riverside 2023 (Ren et al.), IEA 2023, Goldman Sachs 2024
 ## 🏗️ Project Structure
 EcoTrace/
 ├── extension/   
-│   ├── manifest.json
-│   ├── background.js
-│   └── content.js
-│
+  ├── manifest.json
+  ├── background.js
+   └── content.js
 ├── backend/           
-│   ├── app.py
-│   ├── calculator.py
-│   ├── database.py
-│   ├── requirements.txt
-│   └── templates/
-│       └── dashboard.html 
-│
+   ├── app.py
+   ├── calculator.py
+   ├── database.py
+   ├── requirements.txt
+   └── templates/
+       └── dashboard.html 
+
 └── README.md
 
 
